@@ -7,24 +7,7 @@ let spaceball;                  // A SimpleRotator object that lets the user rot
 let surfaceLight;
 let surfaceLightLine;
 let pointLoc = [0, 0]
-
-window.onkeydown = (e) => {
-    console.log(e.keyCode)
-    if (e.keyCode == 87) {
-        pointLoc[0] = Math.min(pointLoc[0] + 0.1, 1);
-    }
-    else if (e.keyCode == 83) {
-        pointLoc[0] = Math.max(pointLoc[0] - 0.1, 0);
-    }
-    else if (e.keyCode == 65) {
-        pointLoc[1] = Math.max(pointLoc[1] - 0.1, 0);
-    }
-    else if (e.keyCode == 68) {
-        pointLoc[1] = Math.min(pointLoc[1] + 0.1, 1);
-    }
-
-
-}
+let camera;
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -156,37 +139,21 @@ function draw() {
 
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
-    let x1 = document.getElementById('x1').value,
-        y1 = document.getElementById('y1').value,
-        z1 = document.getElementById('z1').value,
-        x2 = document.getElementById('x2').value,
-        y2 = document.getElementById('y2').value,
-        z2 = document.getElementById('z2').value,
-        time = now() * 0.001;
-    gl.uniform3fv(shProgram.iLightLocation, [cos(time), sin(time), z1]);
-    // gl.uniform3fv(shProgram.iLightDirection, [-cos(time), -sin(time), -z1]);
-    // gl.uniform3fv(shProgram.iLightLocation, [x1, y1, z1]);
-    gl.uniform3fv(shProgram.iLightDirection, [-(cos(time) - x2), -(sin(time) - y2), -(z1 - z2)]);
-    gl.uniform1f(shProgram.iAngle, document.getElementById('angle').value);
-    gl.uniform1f(shProgram.iFocus, document.getElementById('focus').value);
-    gl.uniform1f(shProgram.iR1, document.getElementById('r1').value);
-    gl.uniform2fv(shProgram.iPL, pointLoc);
-
+    camera.ApplyLeftFrustum();
+    modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, matAccum1));
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+    gl.colorMask(true, false, false, false);
     surface.Draw();
-    gl.uniform1f(shProgram.iAngle, -1);
-    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.multiply(
-        modelViewProjection,
-        m4.translation(...monge(pointLoc[0]*numStepsI/10,pointLoc[1]*numStepsJ/10))
-        // m4.translation(x1, y1, z1)
-    ));
-    surfaceLight.Draw();
-    // surfaceLightLine.BufferData([0, 0, 0, -cos(time), -sin(time), -z1]);
-    // surfaceLightLine.DrawLine()
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    camera.ApplyRightFrustum();
+    modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, matAccum1));
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+    gl.colorMask(false, true, true, false);
+    surface.Draw();
+    gl.colorMask(true, true, true, true);
 }
 
 function reDraw() {
-    // surface.BufferData(CreateSurfaceData());
-    // surface.BufferDataNormal(CreateSurfaceDataNormal());
     draw()
     window.requestAnimationFrame(reDraw)
 }
@@ -305,9 +272,10 @@ function z(t) {
     return coord;
 }
 
-
+let gui;
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
+    gui = new GUI()
     let prog = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 
     shProgram = new ShaderProgram('Basic', prog);
@@ -324,6 +292,17 @@ function initGL() {
     shProgram.iFocus = gl.getUniformLocation(prog, "focus");
     shProgram.iPL = gl.getUniformLocation(prog, "pointLoc");
     shProgram.iR1 = gl.getUniformLocation(prog, "r1");
+
+    camera = new StereoCamera(4,     // Convergence
+        0.25,       // Eye Separation
+        1,     // Aspect Ratio
+        30,       // FOV along Y in degrees
+        8.0,       // Near Clipping Distance
+        12.0);   // Far Clipping Distance
+    gui.add(camera, 'mConvergence', 0.5, 10)
+    gui.add(camera, 'mEyeSeparation', 0.01, 0.5)
+    gui.add(camera, 'mFOV', 0.1, 1.5)
+    gui.add(camera, 'mNearClippingDistance', 8, 10.5)
 
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
