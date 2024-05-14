@@ -8,6 +8,8 @@ let surfaceLight;
 let surfaceLightLine;
 let pointLoc = [0, 0]
 let camera;
+let plane;
+let track, webcam, texture1, texture2
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -35,6 +37,7 @@ function LoadTexture() {
         console.log("imageLoaded")
         draw()
     }
+    return texture;
 }
 
 
@@ -134,8 +137,20 @@ function draw() {
     /* Multiply the projection matrix times the modelview matrix to give the
        combined transformation matrix, and send that to the shader program. */
     let modelViewProjection = m4.multiply(projection, matAccum1);
+    gl.bindTexture(gl.TEXTURE_2D, texture2);
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        webcam
+    );
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.identity());
+    plane.Draw();
 
-    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.bindTexture(gl.TEXTURE_2D, texture1);
 
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
@@ -272,6 +287,34 @@ function z(t) {
     return coord;
 }
 
+function planeVertices() {
+    const vertices = [
+        [-1, -1, 0],
+        [1, 1, 0],
+        [1, -1, 0],
+        [-1, 1, 0]
+    ]
+    const indices = [1, 0, 3, 0, 1, 2]
+    let vertexList = []
+    indices.forEach(i => {
+        vertexList.push(...vertices[i])
+    })
+    return vertexList;
+}
+function planeTextures() {
+    const textures = [
+        [1, 1],
+        [0, 0],
+        [0, 1],
+        [1, 0]]
+    const indices = [1, 0, 3, 0, 1, 2]
+    let textureList = []
+    indices.forEach(i => {
+        textureList.push(...textures[i])
+    })
+    return textureList;
+}
+
 let gui;
 /* Initialize the WebGL context. Called from init() */
 function initGL() {
@@ -308,12 +351,10 @@ function initGL() {
     surface.BufferData(CreateSurfaceData());
     surface.BufferDataNormal(CreateSurfaceDataNormal());
     surface.BufferDataTexture(CreateSurfaceDataTexture());
-    surfaceLight = new Model();
-    surfaceLight.BufferData(CreateSurfaceDataSphere());
-    surfaceLight.BufferDataNormal(CreateSurfaceDataSphere());
-    surfaceLight.BufferDataTexture(CreateSurfaceDataSphere());
-    surfaceLightLine = new Model();
-    surfaceLightLine.BufferData([0, 0, 0, 1, 1, 1]);
+    plane = new Model('Plane')
+    plane.BufferData(planeVertices())
+    plane.BufferDataNormal(planeVertices())
+    plane.BufferDataTexture(planeTextures())
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -355,6 +396,7 @@ function createProgram(gl, vShader, fShader) {
  * initialization function that will be called when the page has loaded
  */
 function init() {
+    webcam = CreateVideo()
     let canvas;
     try {
         canvas = document.getElementById("webglcanvas");
@@ -380,5 +422,27 @@ function init() {
     spaceball = new TrackballRotator(canvas, draw, 0);
 
     reDraw();
-    LoadTexture()
+    texture1 = LoadTexture()
+    texture2 = CreateWebcamTexture2()
+}
+
+function CreateWebcamTexture2() {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return texture
+}
+function CreateVideo() {
+    const video = document.createElement('video');
+    video.setAttribute('autoplay', true);
+    navigator.getUserMedia({ video: true, audio: false }, function (stream) {
+        video.srcObject = stream;
+        track = stream.getTracks()[0]; // this line is optional, but needs global variable track if not deleted
+    }, function (e) {
+        console.error('Rejected!', e);
+    });
+    return video;
 }
