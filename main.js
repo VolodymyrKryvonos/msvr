@@ -205,7 +205,7 @@ function ShaderProgram(name, program) {
 const { now } = Date
 function draw() {
     if (xG != null) {
-        gyroscopeToRotationMatrix()
+        // gyroscopeToRotationMatrix()
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -242,13 +242,13 @@ function draw() {
         /* Draw the six faces of a cube, with different colors. */
         gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
         camera.ApplyLeftFrustum();
-        modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, gyroMat)));
+        modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, sensorMat)));
         gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
         gl.colorMask(true, false, false, false);
         surface.Draw();
         gl.clear(gl.DEPTH_BUFFER_BIT);
         camera.ApplyRightFrustum();
-        modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, gyroMat)));
+        modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, sensorMat)));
         gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
         gl.colorMask(false, true, true, false);
         surface.Draw();
@@ -484,9 +484,20 @@ function createProgram(gl, vShader, fShader) {
 /**
  * initialization function that will be called when the page has loaded
  */
+let sensorMat = m4.identity();
 function init() {
     webcam = CreateVideo()
     readGyroscope();
+    window.addEventListener(
+        "deviceorientation",
+        (e) => {
+            sensorMat = m4.multiply(
+                m4.xRotation(deg2rad(e.beta)), m4.multiply(
+                    m4.yRotation(deg2rad(e.gamma)),
+                    m4.zRotation(deg2rad(e.alpha))))
+        },
+        true,
+    );
     let canvas;
     try {
         canvas = document.getElementById("webglcanvas");

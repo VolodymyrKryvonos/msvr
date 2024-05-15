@@ -1,54 +1,60 @@
 <!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-<title>PA#2</title>
-<style>
-    body {
-        background-color: #EEEEEE;
-    }
-</style>
+    <title>PA#4</title>
+    <style>
+        body {
+            background-color: #EEEEEE;
+        }
+    </style>
 
-<script src="./Utils/trackball-rotator.js"></script>
-<script src="./Utils/m4.js"></script>
-<script src="./shader.gpu"></script>
-<script src="./CameraConstructor.js"></script>
-<script src="./lil-gui.js"></script>
-<script src="./main.js"></script>
+    <script src="./Utils/trackball-rotator.js"></script>
+    <script src="./Utils/m4.js"></script>
+    <script src="./shader.gpu"></script>
+    <script src="./CameraConstructor.js"></script>
+    <script src="./lil-gui.js"></script>
+    <script src="./main.js"></script>
 
 </head>
+
 <body onload="init()">
 
-<h2>A Cube with "Trackball" Mouse Rotation</h2>
+    <h2>A Cube with "Trackball" Mouse Rotation</h2>
 
-<p id="message">Drag your mouse on the cube to rotate it.<br>
-(On a touch screen, you can use your finger.)</p>
-<div hidden>
-<!-- <label for="numSteps">Select prolongation of the surface</label>
+    <p id="message">Drag your mouse on the cube to rotate it.<br>
+        (On a touch screen, you can use your finger.)</p>
+    <div hidden>
+        <!-- <label for="numSteps">Select prolongation of the surface</label>
 <input type="range" id="numSteps" value="100" min="10" max="200" step="1" onchange="reDraw()"> -->
-<label for="angle">Select light's directionality</label>
-<input type="range" id="angle" value="1.5" min="0" max="3" step="0.001" onchange="draw()">
-<label for="focus">Select light's focus</label>
-<input type="range" id="focus" value="0.01" min="0" max="0.5" step="0.01" onchange="draw()">
-</div>
-<div hidden>
-    x<input type="range" id="x1" min="-1" max="1" value="1" step="0.1" onchange="draw()">
-y<input type="range" id="y1" min="-1" max="1" value="1" step="0.1" onchange="draw()">
+        <label for="angle">Select light's directionality</label>
+        <input type="range" id="angle" value="1.5" min="0" max="3" step="0.001" onchange="draw()">
+        <label for="focus">Select light's focus</label>
+        <input type="range" id="focus" value="0.01" min="0" max="0.5" step="0.01" onchange="draw()">
+    </div>
+    <div hidden>
+        x<input type="range" id="x1" min="-1" max="1" value="1" step="0.1" onchange="draw()">
+        y<input type="range" id="y1" min="-1" max="1" value="1" step="0.1" onchange="draw()">
 
-</div>
-<br>
-select angle of rotation
-<input type="range" id="r1" min="-3.14" max="3.14" value="0" step="0.02" onchange="draw()">
-<input type="range" id="z1" min="1" max="2" value="1" step="0.1" onchange="draw()" hidden>
+    </div>
+    <br>
+    select angle of rotation
+    <input type="range" id="r1" min="-3.14" max="3.14" value="0" step="0.02" onchange="draw()">
+    <input type="range" id="z1" min="1" max="2" value="1" step="0.1" onchange="draw()" hidden>
 
-<div hidden>light direction
-    x<input type="range" id="x2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
-y<input type="range" id="y2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
-z<input type="range" id="z2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
-</div>
-<div id="canvas-holder">
-   <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
-</div>
+    <div hidden>light direction
+        x<input type="range" id="x2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
+        y<input type="range" id="y2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
+        z<input type="range" id="z2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
+    </div>
+    <div id="canvas-holder">
+        <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
+    </div>
 
 
-</body></html>
+</body>
+
+</html>
