@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-    <title>PA#4</title>
+    <title>РГР</title>
     <style>
         body {
             background-color: #EEEEEE;
@@ -50,6 +50,18 @@
         y<input type="range" id="y2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
         z<input type="range" id="z2" min="-1" max="1" value="-1" step="0.1" onchange="draw()">
     </div>
+    <hr>
+    <audio id="audioID" src="1663000079_krtsvtpsptrn.mp3"
+        crossorigin="anonymous" controls loop></audio>
+    <br>
+    <label for="state">Стан фільтру високих частот</label>
+    <input type="checkbox" name="state" id="state" checked>
+    <br>
+    <label for="f">frequency value</label>
+    <input type="range" id='f' , min='1000' max='20000' step='100' value='12345'>
+    <label for="f">Q value</label>
+    <input type="range" id='q' , min='0' max='1' step='0.01' value='0.1'>
+    <hr>
     <div id="canvas-holder">
         <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
     </div>

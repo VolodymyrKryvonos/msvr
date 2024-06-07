@@ -6,6 +6,7 @@ let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 let surfaceLight;
 let surfaceLightLine;
+let surfaceAudio;
 let pointLoc = [0, 0]
 let camera;
 let plane;
@@ -202,58 +203,113 @@ function ShaderProgram(name, program) {
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
+let audio = null,
+    context,
+    src,
+    panner,
+    highpass
+function initAudioContext() {
+    audio = document.getElementById('audioID');
+
+    audio.addEventListener('play', () => {
+        if (!context) {
+            context = new AudioContext();
+            src = context.createMediaElementSource(audio);
+            panner = context.createPanner();
+            highpass = context.createBiquadFilter();
+
+            src.connect(panner);
+            panner.connect(highpass);
+            highpass.connect(context.destination);
+
+            highpass.type = 'bandpass';
+            highpass.Q.value = 0.1;
+            highpass.frequency.value = 12345;
+            context.resume();
+        }
+    })
+
+
+    audio.addEventListener('pause', () => {
+        console.log('pause');
+        context.resume();
+    })
+    let highpassCheckbox = document.getElementById('state');
+    highpassCheckbox.addEventListener('change', function() {
+        if (highpassCheckbox.checked) {
+            panner.disconnect();
+            panner.connect(highpass);
+            highpass.connect(context.destination);
+        } else {
+            panner.disconnect();
+            panner.connect(context.destination);
+        }
+    });
+    audio.play();
+}
 const { now } = Date
 function draw() {
-    if (xG != null) {
-        // gyroscopeToRotationMatrix()
-        gl.clearColor(0, 0, 0, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        /* Set the values of the projection transformation */
-        let projection = m4.perspective(Math.PI / 8, 1, 8, 12);
+    // gyroscopeToRotationMatrix()
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        /* Get the view matrix from the SimpleRotator object.*/
-        let modelView = spaceball.getViewMatrix();
+    /* Set the values of the projection transformation */
+    let projection = m4.perspective(Math.PI / 8, 1, 8, 12);
 
-        let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.01);
-        let translateToPointZero = m4.translation(0, 0, -10);
+    /* Get the view matrix from the SimpleRotator object.*/
+    let modelView = spaceball.getViewMatrix();
 
-        let matAccum0 = m4.multiply(rotateToPointZero, modelView);
-        let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
+    let rotateToPointZero = m4.axisRotation([0.707, 0.707, 0], 0.01);
+    let translateToPointZero = m4.translation(0, 0, -10);
 
-        /* Multiply the projection matrix times the modelview matrix to give the
-           combined transformation matrix, and send that to the shader program. */
-        let modelViewProjection = m4.multiply(projection, matAccum1);
-        gl.bindTexture(gl.TEXTURE_2D, texture2);
-        gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RGBA,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            webcam
-        );
-        gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.identity());
-        plane.Draw();
+    let matAccum0 = m4.multiply(rotateToPointZero, modelView);
+    let matAccum1 = m4.multiply(translateToPointZero, matAccum0);
 
-        gl.clear(gl.DEPTH_BUFFER_BIT);
-        gl.bindTexture(gl.TEXTURE_2D, texture1);
+    /* Multiply the projection matrix times the modelview matrix to give the
+       combined transformation matrix, and send that to the shader program. */
+    let modelViewProjection = m4.multiply(projection, matAccum1);
+    gl.bindTexture(gl.TEXTURE_2D, texture2);
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        webcam
+    );
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.identity());
+    plane.Draw();
 
-        /* Draw the six faces of a cube, with different colors. */
-        gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
-        camera.ApplyLeftFrustum();
-        modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, sensorMat)));
-        gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
-        gl.colorMask(true, false, false, false);
-        surface.Draw();
-        gl.clear(gl.DEPTH_BUFFER_BIT);
-        camera.ApplyRightFrustum();
-        modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, sensorMat)));
-        gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
-        gl.colorMask(false, true, true, false);
-        surface.Draw();
-        gl.colorMask(true, true, true, true);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.bindTexture(gl.TEXTURE_2D, texture1);
+    // let horiz = Math.cos(Date.now() * 0.001)
+    // let vertic = Math.sin(Date.now() * 0.001)
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, m4.translation(...getAudioVector()));
+    if (panner) {
+        panner.setPosition(...getAudioVector())
+        highpass.Q.value =
+            parseFloat(document.getElementById('q').value)
+        highpass.frequency.value =
+            parseFloat(document.getElementById('f').value)
     }
+    surfaceAudio.Draw();
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+
+    /* Draw the six faces of a cube, with different colors. */
+    gl.uniform4fv(shProgram.iColor, [1, 1, 0, 1]);
+    camera.ApplyLeftFrustum();
+    modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, sensorMat)));
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+    gl.colorMask(true, false, false, false);
+    surface.Draw();
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    camera.ApplyRightFrustum();
+    modelViewProjection = m4.multiply(camera.mProjectionMatrix, m4.multiply(camera.mModelViewMatrix, m4.multiply(matAccum1, sensorMat)));
+    gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection);
+    gl.colorMask(false, true, true, false);
+    surface.Draw();
+    gl.colorMask(true, true, true, true);
 }
 
 function reDraw() {
@@ -444,6 +500,10 @@ function initGL() {
     plane.BufferData(planeVertices())
     plane.BufferDataNormal(planeVertices())
     plane.BufferDataTexture(planeTextures())
+    surfaceAudio = new Model('Sphere')
+    surfaceAudio.BufferData(CreateSurfaceDataSphere())
+    surfaceAudio.BufferDataNormal(CreateSurfaceDataSphere())
+    surfaceAudio.BufferDataTexture(CreateSurfaceDataSphere())
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -484,8 +544,10 @@ function createProgram(gl, vShader, fShader) {
 /**
  * initialization function that will be called when the page has loaded
  */
+let alphaS = 0, betaS = 0, gammaS = 0;
 let sensorMat = m4.identity();
 function init() {
+    initAudioContext()
     webcam = CreateVideo()
     readGyroscope();
     window.addEventListener(
@@ -495,6 +557,10 @@ function init() {
                 m4.xRotation(deg2rad(e.beta)), m4.multiply(
                     m4.yRotation(deg2rad(e.gamma)),
                     m4.zRotation(deg2rad(e.alpha))))
+            alphaS = e.alpha
+            betaS = e.beta
+            gammaS = e.gamma
+
         },
         true,
     );
@@ -546,4 +612,52 @@ function CreateVideo() {
         console.error('Rejected!', e);
     });
     return video;
+}
+
+function getAudioVector() {
+    // Convert angles to radians
+    const alphaRad = deg2rad(alphaS)
+    const betaRad = deg2rad(betaS)
+    const gammaRad = deg2rad(gammaS)
+
+    // Define the initial vector along the x-axis
+    let vector = [0, 1, 0];
+
+    // Rotation around the z-axis (gamma)
+    const rotZ = [
+        [Math.cos(gammaRad), -Math.sin(gammaRad), 0],
+        [Math.sin(gammaRad), Math.cos(gammaRad), 0],
+        [0, 0, 1]
+    ];
+    vector = multiplyMatrixVector(rotZ, vector);
+
+    // Rotation around the y-axis (beta)
+    const rotY = [
+        [Math.cos(betaRad), 0, Math.sin(betaRad)],
+        [0, 1, 0],
+        [-Math.sin(betaRad), 0, Math.cos(betaRad)]
+    ];
+    vector = multiplyMatrixVector(rotY, vector);
+
+    // Rotation around the x-axis (alpha)
+    const rotX = [
+        [1, 0, 0],
+        [0, Math.cos(alphaRad), -Math.sin(alphaRad)],
+        [0, Math.sin(alphaRad), Math.cos(alphaRad)]
+    ];
+    vector = multiplyMatrixVector(rotX, vector);
+
+    return vector;
+}
+
+function multiplyMatrixVector(matrix, vector) {
+    const result = [];
+    for (let i = 0; i < matrix.length; i++) {
+        let sum = 0;
+        for (let j = 0; j < vector.length; j++) {
+            sum += matrix[i][j] * vector[j];
+        }
+        result.push(sum);
+    }
+    return result;
 }
